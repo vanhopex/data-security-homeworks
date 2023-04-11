@@ -1,6 +1,7 @@
 #include"AES.h"
 #include<stdio.h>
 #include<string.h>
+#include<stdlib.h>
 
 #define BLOCKSIZE 16
 
@@ -19,7 +20,7 @@
                 ((S[BYTE(x, 0)] << 8) & 0xff00) ^ (S[BYTE(x, 3)] & 0xff))
 
 typedef struct{
-    uint32_t eK[44], dK[44]; // 加密的K， 解密的K
+    uint32_t eK[120], dK[120]; // 加密的K， 解密的K
     int Nr; // 10 rounds
 }AesKey;
 
@@ -86,6 +87,44 @@ int storeStateArray(uint8_t state[][4], uint8_t *out) {
 /*AES-128 192 256是不同的*/
 int keyExpansion(const uint8_t *key, uint32_t keyLen, AesKey *aesKey) {
     int Nk = keyLen / 4; // Nk = 4, 6, 8; 分别代表 128 192 256位的密钥
+
+    uint32_t *w = aesKey->eK;
+    uint32_t *v = aesKey->dK;
+    /*w[0 -> Nk)*/
+    for (int i = 0; i < Nk; ++i) {
+        LOAD32H(w[i], key + 4*i);
+    }
+    uint32_t Nr = (Nk == 4 ? 10 : (Nk == 6 ? 12 : 14));
+    uint32_t Nb = 4;
+    /*w[Nk -> Nb*(Nr+1))*/
+    // for (int i = Nk; i < Nb * (Nr + 1); ++i) {
+    //     uint32_t temp = w[i-1];
+    //     if (i % Nk == 0) {
+    //         temp = MIX(temp) ^ rcon[i/Nk - 1]; //rcon[]从0开始
+    //     }
+    //     else {
+    //         temp = S[temp];
+    //     }
+    //     w[i] = w[i - Nk] ^ temp;
+    // }
+    for (int i = Nk; i < Nb * (Nr + 1); ++i) {
+        if (i % Nk == 0) {
+            w[i] = w[i-Nk] ^ MIX(w[i-1]) ^ rcon[i/Nk - 1];
+        }
+        else {
+            w[i] = w[i-Nk] ^ w[i-1];
+        }
+    }
+    /*解密的key expansion*/
+    w = aesKey->eK + (Nb * (Nr + 1)) - 4;
+    for (int j = 0; j < Nr + 1; ++j) {
+        for(int i = 0; i < Nb; ++i) {
+            v[i] = w[i];
+        }
+        w -= 4;
+        v += 4;
+    }
+
 
     return 0;
 }
@@ -320,7 +359,10 @@ int aesEncrypt(const uint8_t *key, uint32_t keyLen, const uint8_t *pt, uint8_t *
     uint8_t *pos = ct;
     const uint32_t *rk = aesKey.eK;
     uint8_t out[BLOCKSIZE] = {0};
-    uint8_t actualKey[16] = {0};
+    // uint8_t actualKey[keyLen] = {0};
+    uint8_t *actualKey = malloc(keyLen * sizeof(uint8_t));
+    // memset(actualKey, 0, sizeof actualKey);
+
     uint8_t state[4][4] = {0};
 
     if (NULL == key || NULL == pt || NULL == ct){
@@ -334,10 +376,11 @@ int aesEncrypt(const uint8_t *key, uint32_t keyLen, const uint8_t *pt, uint8_t *
     }
     // 这里也需要根据keyLen的长度进行修改，128的加密10轮，192的加密12， 256加密14次
     int Nk = keyLen / 4; //密钥的字数（32bits一个字），keyLen是字节数
-    int Nr = Nr == 4 ? 10 : (Nr == 6 ? 12 : 14);
+    int Nr = (Nk == 4 ? 10 : (Nk == 6 ? 12 : 14));
+
 
     memcpy(actualKey, key, keyLen);
-    keyExpansion(actualKey, 16, &aesKey);
+    keyExpansion(actualKey, keyLen, &aesKey);
 
     for (int i = 0; i < len; i += BLOCKSIZE) {
 
@@ -345,23 +388,25 @@ int aesEncrypt(const uint8_t *key, uint32_t keyLen, const uint8_t *pt, uint8_t *
         addRoundKey(state, rk);
 
         for (int j = 1; j < Nr; ++j) {
-            rk += 4;
+            // rk += 4;
             subBytes(state);
             shiftRows(state);
             mixColumns(state);
-            addRoundKey(state, rk);
+            addRoundKey(state, rk + j * 4);
         }
 
         subBytes(state);
         shiftRows(state);
-        addRoundKey(state, rk+4);
+        addRoundKey(state, rk + Nr * 4);
 
         storeStateArray(state, pos);
 
+        // 下一组
         pos += BLOCKSIZE;
         pt += BLOCKSIZE;
-        rk = aesKey.eK;
+        // rk = aesKey.eK;
     }
+    free(actualKey);
     return 0;
 }
 

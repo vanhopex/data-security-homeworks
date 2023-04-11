@@ -37,23 +37,23 @@ int main() {
     printHex(plain, 16, "after decryption:");
 
     // case 2
-    const uint8_t key2[]="1234567890123456";
+    const uint8_t key2[]="123456789012345678901234";
     const uint8_t *data = (uint8_t*)"abcdefghijklmnopqrstuvwxyz123456";
     uint8_t ct2[32] = {0};
     uint8_t plain2[32] = {0};
-    aesEncrypt(key2, 16, data, ct2, 32);
+    aesEncrypt(key2, 24, data, ct2, 32);
 
     printf("\nplain text:\n%s\n", data);
     printf("expect ciphertext:\nfcad715bd73b5cb0488f840f3bad7889\n");
     printHex(ct2, 32, "after encryption:");
 
-    aesDecrypt(key2, 16, ct2, plain2, 32);
-    printHex(plain2, 32, "after decryption:");
+    // aesDecrypt(key2, 16, ct2, plain2, 32);
+    // printHex(plain2, 32, "after decryption:");
 
-    printf("output plain text: ");
-    for (int i = 0; i < 32; ++i) {
-        printf("%c", plain2[i]);
-    }
+    // printf("output plain text: ");
+    // for (int i = 0; i < 32; ++i) {
+    //     printf("%c", plain2[i]);
+    // }
 
     printf("\n finished the AES");
     return 0;
