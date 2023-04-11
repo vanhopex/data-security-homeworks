@@ -1,5 +1,6 @@
 #include "AES.h"
 #include <stdio.h>
+#include <string.h>
 
 
 void printHex(const uint8_t *ptr, int len, char *tag) {
@@ -37,23 +38,24 @@ int main() {
     printHex(plain, 16, "after decryption:");
 
     // case 2
-    const uint8_t key2[]="12345678901234567890123456789012";
+    const uint8_t key2[]="1234567890123456";
     const uint8_t *data = (uint8_t*)"abcdefghijklmnopqrstuvwxyz123456";
     uint8_t ct2[32] = {0};
     uint8_t plain2[32] = {0};
-    aesEncrypt(key2, 32, data, ct2, 32);
+    // printf("%ld %ld\n", sizeof(key2), sizeof(*data) * strlen((char*)data));
+    aesEncrypt(key2, sizeof(key2) - 1, data, ct2, sizeof(*data) * strlen((char*)data));
 
     printf("\nplain text:\n%s\n", data);
     printf("expect ciphertext:\nfcad715bd73b5cb0488f840f3bad7889\n");
-    printHex(ct2, 32, "after encryption:");
+    printHex(ct2, sizeof(*data) * strlen((char*)data), "after encryption:");
 
-    // aesDecrypt(key2, 32, ct2, plain2, 32);
-    // printHex(plain2, 32, "after decryption:");
+    aesDecrypt(key2, sizeof(key2) - 1, ct2, plain2, sizeof(*data) * strlen((char*)data));
+    printHex(plain2, sizeof(*data) * strlen((char*)data), "after decryption:");
 
-    // printf("output plain text: ");
-    // for (int i = 0; i < 32; ++i) {
-    //     printf("%c", plain2[i]);
-    // }
+    printf("output plain text: ");
+    for (int i = 0; i < sizeof(*data) * strlen((char*)data); ++i) {
+        printf("%c", plain2[i]);
+    }
 
     printf("\n finished the AES");
     return 0;

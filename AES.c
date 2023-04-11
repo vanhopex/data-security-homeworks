@@ -374,8 +374,13 @@ int aesEncrypt(const uint8_t *key, uint32_t keyLen, const uint8_t *pt, uint8_t *
         return -1;
     }
 
+    if (keyLen != 16 && keyLen != 24 && keyLen != 32) {
+        printf("Not support key length.\n");
+        return -1;
+    }
+
     if (len % BLOCKSIZE){
-        printf("inLen is invalid.\n");
+        printf("the length of data is invalid.\n");
         return -1;
     }
     // 这里也需要根据keyLen的长度进行修改，128的加密10轮，192的加密12， 256加密14次
@@ -419,7 +424,10 @@ int aesDecrypt(const uint8_t *key, uint32_t keyLen, const uint8_t *ct, uint8_t *
     uint8_t *pos = pt;
     const uint32_t *rk = aesKey.dK;
     uint8_t out[BLOCKSIZE] = {0};
-    uint8_t actualKey[16] = {0};
+    // uint8_t actualKey[keyLen] = {0};
+    uint8_t *actualKey = malloc(keyLen * sizeof(uint8_t));
+    // memset(actualKey, 0, sizeof actualKey);
+
     uint8_t state[4][4] = {0};
 
     if (NULL == key || NULL == ct || NULL == pt){
@@ -427,39 +435,44 @@ int aesDecrypt(const uint8_t *key, uint32_t keyLen, const uint8_t *ct, uint8_t *
         return -1;
     }
 
-    if (keyLen > 16){
-        printf("keyLen must be 16.\n");
+    if (keyLen != 16 && keyLen != 24 && keyLen != 32) {
+        printf("Not support key length.\n");
         return -1;
     }
 
     if (len % BLOCKSIZE){
-        printf("inLen is invalid.\n");
+        printf("the length of data is invalid.\n");
         return -1;
     }
 
+    int Nk = keyLen / 4; //密钥的字数（32bits一个字），keyLen是字节数
+    int Nr = (Nk == 4 ? 10 : (Nk == 6 ? 12 : 14));
+
+
     memcpy(actualKey, key, keyLen);
-    keyExpansion(actualKey, 16, &aesKey);
+    keyExpansion(actualKey, keyLen, &aesKey);
 
     for (int i = 0; i < len; i += BLOCKSIZE) {
-        loadStateArray(state, ct);
+        loadStateArray(state, ct + i);
         addRoundKey(state, rk);
 
-        for (int j = 1; j < 10; ++j) {
-            rk += 4;
+        for (int j = 1; j < Nr; ++j) {
+            // rk += 4;
             invShiftRows(state);
             invSubBytes(state);
-            addRoundKey(state, rk);
+            addRoundKey(state, rk + j * 4);
             invMixColumns(state);
         }
 
         invSubBytes(state);
         invShiftRows(state);
-        addRoundKey(state, rk+4);
+        addRoundKey(state, rk + Nr * 4);
 
-        storeStateArray(state, pos);
-        pos += BLOCKSIZE;
-        ct += BLOCKSIZE;
-        rk = aesKey.dK;
+        storeStateArray(state, pos + i);
+        // pos += BLOCKSIZE;
+        // ct += BLOCKSIZE;
+        // rk = aesKey.dK;
     }
+    free(actualKey);
     return 0;
 }
