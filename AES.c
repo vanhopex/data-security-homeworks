@@ -16,6 +16,9 @@
   do { (y)[0] = (uint8_t)(((x)>>24) & 0xff); (y)[1] = (uint8_t)(((x)>>16) & 0xff);   \
        (y)[2] = (uint8_t)(((x)>>8) & 0xff); (y)[3] = (uint8_t)((x) & 0xff); } while(0)
 
+#define SUBWORD(x) (((S[BYTE(x, 3)] << 24) & 0xff000000) ^ ((S[BYTE(x, 2)] << 16) & 0xff0000) ^ \
+                ((S[BYTE(x, 1)] << 8) & 0xff00) ^ (S[BYTE(x, 0)] & 0xff))
+
 #define MIX(x) (((S[BYTE(x, 2)] << 24) & 0xff000000) ^ ((S[BYTE(x, 1)] << 16) & 0xff0000) ^ \
                 ((S[BYTE(x, 0)] << 8) & 0xff00) ^ (S[BYTE(x, 3)] & 0xff))
 
@@ -97,24 +100,25 @@ int keyExpansion(const uint8_t *key, uint32_t keyLen, AesKey *aesKey) {
     uint32_t Nr = (Nk == 4 ? 10 : (Nk == 6 ? 12 : 14));
     uint32_t Nb = 4;
     /*w[Nk -> Nb*(Nr+1))*/
+    for (int i = Nk; i < Nb * (Nr + 1); ++i) {
+        uint32_t temp = w[i-1];
+        if (i % Nk == 0) {
+            temp = MIX(temp) ^ rcon[i/Nk - 1]; //rcon[]从0开始
+        }
+        else if ((Nk > 6) && (i % Nk == 4)) {
+            // temp = S[temp];
+            temp = SUBWORD(temp);
+        }
+        w[i] = w[i - Nk] ^ temp;
+    }
     // for (int i = Nk; i < Nb * (Nr + 1); ++i) {
-    //     uint32_t temp = w[i-1];
     //     if (i % Nk == 0) {
-    //         temp = MIX(temp) ^ rcon[i/Nk - 1]; //rcon[]从0开始
+    //         w[i] = w[i-Nk] ^ MIX(w[i-1]) ^ rcon[i/Nk - 1];
     //     }
     //     else {
-    //         temp = S[temp];
+    //         w[i] = w[i-Nk] ^ w[i-1];
     //     }
-    //     w[i] = w[i - Nk] ^ temp;
     // }
-    for (int i = Nk; i < Nb * (Nr + 1); ++i) {
-        if (i % Nk == 0) {
-            w[i] = w[i-Nk] ^ MIX(w[i-1]) ^ rcon[i/Nk - 1];
-        }
-        else {
-            w[i] = w[i-Nk] ^ w[i-1];
-        }
-    }
     /*解密的key expansion*/
     w = aesKey->eK + (Nb * (Nr + 1)) - 4;
     for (int j = 0; j < Nr + 1; ++j) {
@@ -384,7 +388,7 @@ int aesEncrypt(const uint8_t *key, uint32_t keyLen, const uint8_t *pt, uint8_t *
 
     for (int i = 0; i < len; i += BLOCKSIZE) {
 
-        loadStateArray(state, pt);
+        loadStateArray(state, pt + i);
         addRoundKey(state, rk);
 
         for (int j = 1; j < Nr; ++j) {
@@ -399,11 +403,11 @@ int aesEncrypt(const uint8_t *key, uint32_t keyLen, const uint8_t *pt, uint8_t *
         shiftRows(state);
         addRoundKey(state, rk + Nr * 4);
 
-        storeStateArray(state, pos);
+        storeStateArray(state, pos + i);
 
         // 下一组
-        pos += BLOCKSIZE;
-        pt += BLOCKSIZE;
+        // pos += BLOCKSIZE;
+        // pt += BLOCKSIZE;
         // rk = aesKey.eK;
     }
     free(actualKey);
