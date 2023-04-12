@@ -9,4 +9,4 @@ AES.o : AES.c
 
 .PHONY : clean
 clean : 
-	-rm AES main.o AES.o
+	-rm AES main.o AES.o *.txt

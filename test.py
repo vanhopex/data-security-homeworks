@@ -22,13 +22,14 @@ def encrypt_file_test(input_file, c_encrypted_file, key):
                 print(c_block.hex())
                 print("test fail, check out your AES implemention!")
                 return 
-    print("test success!!!")    
+    print("test success!!!")   
+    
+ 
 # 打开输入文件并加密
-key = b"123456789012345678901234"  # 定义加密密钥
-input_file = "16k.txt"
-c_encrypted_file = "c_encrypt_file.txt"
-
-
+key = b"12345678901234567890123456789012"  # 定义加密密钥
+input_file = "4M.txt"
+c_encrypted_file = str(len(key)) + "bytes_c_encrypt_file.txt"
+# 可执行程序
 executable = "./AES"
 # 传入参数
 args = [key, input_file, c_encrypted_file]
