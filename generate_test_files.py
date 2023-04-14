@@ -1,6 +1,6 @@
 import random 
 def testcase_generate():
-    f = open("16k.txt", "w")
+    f = open("16K.txt", "w")
     for i in range(16 * 1024):
         c = chr(random.randint(32, 126))
         f.write(c)

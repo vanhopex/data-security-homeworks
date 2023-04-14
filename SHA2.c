@@ -59,6 +59,8 @@ int sha256(unsigned char *message, uint32_t type) {
 	uint32_t a,b,c,d,e,f,g,h;
 	uint32_t s0, s1, ch, temp1, temp2, maj;
  
+
+    /*数据预处理部分*/
     len = strlen((char*)message);
     bitlen = strlen((char*)message) * 8; 
 
@@ -82,23 +84,24 @@ int sha256(unsigned char *message, uint32_t type) {
         input[new_bitlen / 8 - 1 - i] = (bitlen >> (8*i))&0xff;
     }
     // printHex(input, 64);
+    /*初始化向量*/
     for (int i = 0; i < 8; ++i) 
         hv[i] = hv_primes[i];
     
     for (int i = 0; i < 64; ++i) 
         kv[i] = kv_primes[i];
-    // 处理每个数据块
+
+    /*处理每个数据块*/ 
     for (int nk = 0; nk < nch; ++nk) {
         bzero((void *)chunk_data, sizeof(chunk_data));
-        memcpy((void*)chunk_data, input+(nk*(512>>3)), (512>>3)); // 每次copy64bits到待处理的内存中
+        memcpy((void*)chunk_data, input+(nk*64), 64); // 每次copy64bits到待处理的内存中
         /* 5. 生成运算字单元  words[64] */
         /* 5.1 words[0]~[15]:  u8 chunck_data[64] ---> u32 words[64] */
-        // printHex(chunk_data, 64);
-        for(int i=0; i<16; i++) {
+        for (int i=0; i<16; i++) {
             words[i]=(chunk_data[4*i]<<24) +(chunk_data[4*i+1]<<16)+(chunk_data[4*i+2]<<8)+chunk_data[4*i+3];
         }
         /* 5.2 words[15]~[63]: 48 more words */
-        for(int i=16; i<64; i++) {
+        for (int i=16; i<64; i++) {
             /* s0 = (w[i-15] rightrotate 7) xor (w[i-15] rightrotate 18) xor (w[i-15] rightshift 3) */
             s0=RTROT(4,words[i-15],7) ^ RTROT(4,words[i-15],18) ^ RTSHIFT(words[i-15],3);
             /* s1 = (w[i- 2] rightrotate 17) xor (w[i- 2] rightrotate 19) xor (w[i- 2] rightshift 10) */
@@ -106,27 +109,21 @@ int sha256(unsigned char *message, uint32_t type) {
             /* w[i] = w[i-16] + s0 + w[i-7] + s1 */
             words[i]=words[i-16]+s0+words[i-7]+s1;
         }
-    
         /* 6. 进行64轮的哈希计算　SHA Compression, 64 rounds. */
         /* 更新 a,b,c,d,e,f,g,h */
         a=hv[0]; b=hv[1]; c=hv[2]; d=hv[3]; e=hv[4]; f=hv[5]; g=hv[6]; h=hv[7];
         /* Compress for 64 rounds */
-        for(int i=0; i<64; i++) {
+        for (int i=0; i<64; i++) {
             /* S1 = (e rightrotate 6) xor (e rightrotate 11) xor (e rightrotate 25) */
             s1=RTROT(4,e,6)^RTROT(4,e,11)^RTROT(4,e,25);
-    
             /* ch = (e and f) xor ((not e) and g) */
             ch= (e&f)^((~e)&g);
-    
             /* temp1 = h + S1 + ch + kv[i] + w[i] */
             temp1=h+s1+ch+kv[i]+words[i];
-    
             /* S0 = (a rightrotate 2) xor (a rightrotate 13) xor (a rightrotate 22) */
             s0=RTROT(4,a,2)^RTROT(4,a,13)^RTROT(4,a,22);
-    
             /* maj = (a and b) xor (a and c) xor (b and c) */
             maj=(a&b)^(a&c)^(b&c);
-    
             /* temp2 = S0 + maj */
             temp2=s0+maj;
     
@@ -155,14 +152,12 @@ int sha256(unsigned char *message, uint32_t type) {
 		sprintf((char *)digest+8*i,"%08x",hv[i]); /*Convert to string */
 
 	printf("%s\n", digest);
-
-
     return 0;
 }
 
 int main(int argc, char **argv) {
 
-    char * type = argv[2];
+    char *type = argv[2];
     sha256((unsigned char *)argv[1], (uint32_t)atoi(type)); // type == 256 or 512
 
     return 0;

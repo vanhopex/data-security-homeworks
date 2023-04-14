@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
     }
     endTime = clock();
     
-    printf("\nTime cost of AES Encrypt: %f s", ((double)endTime - startTime) / CLOCKS_PER_SEC);
+    printf("Time cost of AES Encrypt: %f s", ((double)endTime - startTime) / CLOCKS_PER_SEC);
 
     fclose(input_file);
     fclose(output_file);
