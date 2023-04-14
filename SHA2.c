@@ -43,8 +43,8 @@ void printHex(const uint8_t *ptr, int len) { // byte length
     printf("\n");
 }
 
-int sha256(unsigned char *message) {
- 
+int sha256(unsigned char *message, uint32_t type) {
+
     // unsigned char *message = input;
 	uint8_t chunk_data[512/8]={0}; 	/* 512bits信息块 */
 	unsigned int nch;		/* 信息块总数　Total number of 512bits_chunks */
@@ -59,19 +59,6 @@ int sha256(unsigned char *message) {
 	uint32_t a,b,c,d,e,f,g,h;
 	uint32_t s0, s1, ch, temp1, temp2, maj;
  
-
-
-    // len = strlen((char *));
-    // bitlen = len * 8; // 输入的bit长度
-
-   
-
-    // if (mod >= 448 )
-
-       // 数据预处理
-    // printf("before padding, the bit length is %lu\n", strlen((char *)message));
-
- 
     len = strlen((char*)message);
     bitlen = strlen((char*)message) * 8; 
 
@@ -82,45 +69,31 @@ int sha256(unsigned char *message) {
     if (k < 0) k += 512; // k 不可能等于0，引入输入的bitlen是8的整数倍，不可能是447
 
     uint32_t new_bitlen = bitlen + 1 + k + 64;
-    printf("new bitlen is : %d\n", new_bitlen);
     unsigned char *input = (unsigned char *)calloc(new_bitlen/8, sizeof(unsigned char));
-    // printf("calloc %lu\n", strlen((char *)input));
     memcpy(input, message, len);
-    // printf("calloc %lu\n", strlen((char *)input));
-    // 填充一个1，按照大端，填充的是8位的 (1000 0000)_2
+    // 填充一个1，不能填充一个bit，而是直接填充一个byte，填充的是8位的 (1000 0000)_2
     input[len] = 0x80;
-    // printf("calloc %lu\n", strlen((char *)input));
+
     for (int i = 0; i < k/8; ++i) {
         input[len + 1 + i] = 0x00;
     }
-    // printf("calloc %lu\n", strlen((char *)input));
     // 最后64位(8字节)用来存储输入消息的长度
-    // size_t l_bits = len;
-    // unsigned char *p = (unsigned char *)&l_bits;
-    // for (int i = 0; i < 8; i++) {
-    //     input[new_bitlen / 8 - 8 + i] = p[7 - i];
-    // }
-
     for (int i = 0; i < sizeof(bitlen); ++i) {
         input[new_bitlen / 8 - 1 - i] = (bitlen >> (8*i))&0xff;
     }
     // printHex(input, 64);
-    // printf("after padding, the bit length is %lu\n", strlen((char *)input));
-    
     for (int i = 0; i < 8; ++i) 
         hv[i] = hv_primes[i];
     
     for (int i = 0; i < 64; ++i) 
         kv[i] = kv_primes[i];
-
-    
     // 处理每个数据块
     for (int nk = 0; nk < nch; ++nk) {
         bzero((void *)chunk_data, sizeof(chunk_data));
         memcpy((void*)chunk_data, input+(nk*(512>>3)), (512>>3)); // 每次copy64bits到待处理的内存中
-        	/* 5. 生成运算字单元  words[64] */
+        /* 5. 生成运算字单元  words[64] */
         /* 5.1 words[0]~[15]:  u8 chunck_data[64] ---> u32 words[64] */
-        printHex(chunk_data, 64);
+        // printHex(chunk_data, 64);
         for(int i=0; i<16; i++) {
             words[i]=(chunk_data[4*i]<<24) +(chunk_data[4*i+1]<<16)+(chunk_data[4*i+2]<<8)+chunk_data[4*i+3];
         }
@@ -166,7 +139,7 @@ int sha256(unsigned char *message) {
             b=a;
             a=temp1+temp2;
         }    
-        /* 7. 修改哈兮变量　Modify final values */
+        /* 7. 修改哈希变量　Modify final values */
         hv[0] += a;
         hv[1] += b;
         hv[2] += c;
@@ -180,8 +153,8 @@ int sha256(unsigned char *message) {
 	/* 8. 生成最终的哈希消息摘要　Generate final hash digest */
 	for(int i=0; i<8; i++)
 		sprintf((char *)digest+8*i,"%08x",hv[i]); /*Convert to string */
- 
-	printf("\nDigest: %s\n", digest);
+
+	printf("%s\n", digest);
 
 
     return 0;
@@ -189,7 +162,8 @@ int sha256(unsigned char *message) {
 
 int main(int argc, char **argv) {
 
-    sha256((unsigned char *)argv[1]);
+    char * type = argv[2];
+    sha256((unsigned char *)argv[1], (uint32_t)atoi(type)); // type == 256 or 512
 
     return 0;
 }
