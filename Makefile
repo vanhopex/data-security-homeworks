@@ -20,4 +20,4 @@ test_all:
 
 .PHONY : clean
 clean : 
-	-rm AES SHA2 *.o *.txt
+	-rm AES SHA2 sha256 *.o *.txt
