@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include <time.h>
 
@@ -233,47 +234,65 @@ void sha3_512(unsigned char* message, int message_len){
     return ;
 }
 
-void main(int argc, char ** argv){
+int main(int argc, char ** argv){
 
-    unsigned char cooked_message[4*1024*1024+1000];
-    int message_len = 0;
-    if(argc >= 5 && argv[3][1] == 'm'){
-        message_len = strlen(argv[4]);
-        for(int i = 0;i < message_len;i ++){
-            if(argv[4][i] == '1'){
-                SET_BIT(cooked_message[i / 8], i % 8);
-            }
-            else{
-                UNSET_BIT(cooked_message[i / 8], i % 8);
-            }
-        }
+    // unsigned char cooked_message[4*1024*1024+1000];
+    // int message_len = 0;
+    // FILE *f = fopen(argv[2], "r");
+    // fgets(cooked_message, 2000000000,f);
+    // message_len = strlen(cooked_message) * 8;
+
+
+    FILE *fp;
+    unsigned char *buffer;
+    long file_size;
+
+    char*  inputFileName = argv[2];
+    fp = fopen(inputFileName, "rb");
+    if (fp == NULL) {
+        fprintf(stderr, "Error opening file.\n");
+        exit(1);
     }
-    else if(argc >= 5 && argv[3][1] == 'f'){
-        FILE *f = fopen(argv[4], "r");
-        fgets(cooked_message, 2000000000,f);
-        message_len = strlen(cooked_message) * 8;
+
+    fseek(fp, 0L, SEEK_END);  // 移动文件指针到文件末尾
+    file_size = ftell(fp) * 8;    // 获取文件大小
+    rewind(fp);               // 重置文件指针到文件开头
+
+    buffer = (unsigned char*) malloc(file_size);  // 分配缓冲区内存
+    if (buffer == NULL) {
+        fprintf(stderr, "Error allocating memory.\n");
+        exit(1);
     }
+
+    fread(buffer, file_size, 1, fp);  // 读取文件内容到缓冲区
+  
+    fclose(fp);  // 关闭文件
 
     clock_t start;
     clock_t end;
-    switch (argv[2][0]){
-        
-        case '1':
-            start = clock();
-            sha3_256(cooked_message, message_len);
-            end = clock();
-            // printf("digest:\n");
-            for(int i = 0;i < 256 / 8;i ++)printf("%02x", digest[i]);
-            printf("\nTime Cost(without IO):%f\n", ((double)end - start) / CLOCKS_PER_SEC);
-            break;
-        case '3':
-            start = clock();
-            sha3_512(cooked_message, message_len);
-            end = clock();
-            // printf("digest:\n");
-            for(int i = 0;i < 512 / 8;i ++)printf("%02x", digest[i]);
-            printf("\nTime Cost(without IO):%f\n", ((double)end - start) / CLOCKS_PER_SEC);
-            break;
+ 
+    uint32_t type = atoi(argv[1]);
+    if (256 == type) {
+        start = clock();
+        sha3_256(buffer, file_size);
+        end = clock();
+        // printf("digest:\n");
+        for(int i = 0;i < 256 / 8;i ++)printf("%02x", digest[i]);
+        printf("\nTime Cost of SHA3-256 encrypt: %f\n", ((double)end - start) / CLOCKS_PER_SEC);
+
     }
-    return ;
+    else if (512 == type) {
+        start = clock();
+        sha3_512(buffer, file_size);
+        end = clock();
+        // printf("digest:\n");
+        for(int i = 0;i < 512 / 8;i ++)printf("%02x", digest[i]);
+        printf("\nTime Cost of SHA3-512 encrypt: %f\n", ((double)end - start) / CLOCKS_PER_SEC);
+
+    }
+    else printf("Only suport 256 & 512\n");
+
+    free(buffer);
+
+    return 0;
 }

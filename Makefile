@@ -1,10 +1,12 @@
-all : AES SHA2 SM4 generat_data test_all 
+all : AES SM4 SHA2 SHA3 generat_data test_all 
 
 
 
 SHA2 : SHA2.c
 	gcc -o SHA2 SHA2.c
 
+SHA3 : SHA3.c 
+	gcc -o SHA3 SHA3.c 
 
 AES : aes_main.o AES.o
 	gcc -o AES AES.o aes_main.o
@@ -34,4 +36,4 @@ test_all:
 
 .PHONY : clean
 clean : 
-	-rm AES SHA2 SM4 sha256 *.o *.txt
+	-rm AES SM4 SHA2 SHA3 *.o *.txt
