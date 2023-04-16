@@ -383,7 +383,7 @@ int main(int argc, char **argv) {
     else printf("only support SHA256 , SHA512");
     endTime = clock();
 
-     printf("Time cost of SHA-%d Encrypt: %f s", type, ((double)endTime - startTime) / CLOCKS_PER_SEC);
+    printf("Time cost of SHA-%d Encrypt: %f s", type, ((double)endTime - startTime) / CLOCKS_PER_SEC);
 
 
     free(buffer);  // 释放缓冲区内存
