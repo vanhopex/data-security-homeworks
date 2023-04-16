@@ -1,4 +1,6 @@
-all : AES SHA2 generat_data test_all 
+all : AES SHA2 test_all 
+
+
 
 SHA2 : SHA2.c
 	gcc -o SHA2 SHA2.c

@@ -41,14 +41,18 @@ int main(int argc, char* argv[]) {
     size_t bytes_read;
 
     startTime = clock();
+
     while ((bytes_read = fread(buffer, 1, sizeof(buffer), input_file)) > 0) {
 
         uint8_t ct[16] = {0};
+        
         aesEncrypt(key2, length, buffer, ct, sizeof(buffer));
         // printHex(ct, 16, "after encryption:");
         fwrite(ct, 1, bytes_read, output_file);
         // printf("\n");
     }
+
+
     endTime = clock();
     
     printf("Time cost of AES Encrypt: %f s", ((double)endTime - startTime) / CLOCKS_PER_SEC);

@@ -1,17 +1,14 @@
 #include<stdio.h>
 #include<stdlib.h>
+#include<time.h>
 #include<string.h>
 
 /* 右移运算Right shift */
 #define RTSHIFT(x,n)		( (x)>>(n) )
 /* 循环右移Right rotate */
 #define RTROT(xsize,x,n)	( ((x)>>(n)) | ( ((x)&((1<<(n+1))-1)) << ( ((xsize)<<3)-(n) )) )
- 
-/* 右移运算Right shift */
-#define RTSHIFT512(x,n)		(  )
-/* 循环右移Right rotate */
-#define RTROT512(xsize,x,n)	(  )
- 
+
+#define RTROT512(xsize,x,n)	( ((x)>>(n)) | ( ((x)&(((uint64_t)1<<(n+1))-1)) << ( ((xsize)<<3)-(n) )) )
 
 static uint32_t hv_primes[8]= { 
     0x6a09e667,
@@ -106,6 +103,8 @@ int sha256(unsigned char *message) {
         for (int i=0; i<16; i++) {
             words[i]=(chunk_data[4*i]<<24) +(chunk_data[4*i+1]<<16)+(chunk_data[4*i+2]<<8)+chunk_data[4*i+3];
         }
+        // printHex(chunk_data, 64);
+        // printHex(words, 64);
         /* 5.2 words[15]~[63]: 48 more words */
         for (int i=16; i<64; i++) {
             /* s0 = (w[i-15] rightrotate 7) xor (w[i-15] rightrotate 18) xor (w[i-15] rightshift 3) */
@@ -176,7 +175,6 @@ static const uint64_t hv_primes512[8] = {
 /* Variable round constants kv[64] kV变量　*/
 uint64_t hv512[8];
 
-
 /* Hash constant words K for SHA-384 and SHA-512: */
 static const uint64_t kv_primes512[80] = {
 	0x428a2f98d728ae22ULL, 0x7137449123ef65cdULL,
@@ -231,8 +229,8 @@ int sha512(unsigned char* message) {
 	unsigned long mod;		/* 信息长度关于1024的余数　Result of mod calculation: msgbitlen%512 */
  
 	uint64_t words[80]={0};  	/* 运算字单元　 64*80 = 5120 bits */
-	unsigned long long len;		/* length in bytes */
-	unsigned long long bitlen;		/* length in bits */
+	uint64_t len;		/* length in bytes */
+	uint64_t bitlen;		/* length in bits */
 	unsigned char digest[8*8*2+1]={0}; /* convert u64 hv[0-7] to string by sprintf(%08x) */
  
     /* SHA compression vars　运算变量 */
@@ -247,10 +245,10 @@ int sha512(unsigned char* message) {
     mod = bitlen % 1024;
     nch = (mod >= 896) ? bitlen/1024 + 2 : bitlen/1024 + 1;
 
-    int k = 896 - (bitlen + 1) % 1024;
+    uint64_t k = 896 - (bitlen + 1) % 1024;
     if (k < 0) k += 1024; // k 不可能等于0，引入输入的bitlen是8的整数倍，不可能是447
 
-    uint32_t new_bitlen = bitlen + 1 + k + 128;
+    uint64_t new_bitlen = bitlen + 1 + k + 128;
     unsigned char *input = (unsigned char *)calloc(new_bitlen/8, sizeof(unsigned char));
     memcpy(input, message, len);
     // 填充一个1，不能填充一个bit，而是直接填充一个byte，填充的是8位的 (1000 0000)_2
@@ -259,10 +257,11 @@ int sha512(unsigned char* message) {
     for (int i = 0; i < k/8; ++i) {
         input[len + 1 + i] = 0x00;
     }
-    // 最后128位(8字节)用来存储输入消息的长度
-    for (int i = 0; i < sizeof(bitlen)*2; ++i) {
+    // 最后128位(16字节)用来存储输入消息的长度
+    for (int i = 0; i < sizeof(bitlen); ++i) {  /*这里只支持2^64位数据，理论上应该支持2^128 bits数据*/
         input[new_bitlen / 8 - 1 - i] = (bitlen >> (8*i))&0xff;
     }
+    // printHex(input, 128);
 
     /*初始化向量*/
     for (int i = 0; i < 8; ++i) 
@@ -274,18 +273,21 @@ int sha512(unsigned char* message) {
  /*处理每个数据块*/ 
     for (int nk = 0; nk < nch; ++nk) {
         bzero((void *)chunk_data, sizeof(chunk_data));
-        memcpy((void*)chunk_data, input+(nk*128), 128); // 每次copy64 bytes(512 bits)到待处理的内存中
+        memcpy((void*)chunk_data, input+(nk*128), 128); // 每次copy 128 bytes(1024 bits)到待处理的内存中
         /* 5. 生成运算字单元  words[64] */
-        /* 5.1 words[0]~[15]:  u8 chunck_data[64] ---> u32 words[64] */
+        /* 5.1 words[0]~[15]:  u8 chunck_data[128] ---> u64 words[64] */
         for (int i=0; i<16; i++) {
-            words[i]=(chunk_data[4*i]<<24) +(chunk_data[4*i+1]<<16)+(chunk_data[4*i+2]<<8)+chunk_data[4*i+3];
+            // words[i]=(chunk_data[4*i]<<24) +(chunk_data[4*i+1]<<16)+(chunk_data[4*i+2]<<8)+chunk_data[4*i+3];
+             words[i] = ((uint64_t)chunk_data[8*i]<<56) + ((uint64_t)chunk_data[8*i+1]<<48) +((uint64_t)chunk_data[8*i+2]<<40) + ((uint64_t)chunk_data[8*i+3]<<32) +
+                        ((uint64_t)chunk_data[8*i+4]<<24) + ((uint64_t)chunk_data[8*i+5]<<16) +((uint64_t)chunk_data[8*i+6]<<8) +((uint64_t)chunk_data[8*i+7]);
         }
+        // printHex(chunk_data, 128);
+        // printHex(words, 128);
         /* 5.2 words[15]~[80]: xx more words */
         for (int i=16; i<80; i++) {
-            /* s0 = (w[i-15] rightrotate 7) xor (w[i-15] rightrotate 18) xor (w[i-15] rightshift 3) */
-            s0=RTROT512(4,words[i-15],7) ^ RTROT512(4,words[i-15],18) ^ RTSHIFT512(words[i-15],3);
+            s0=RTROT512(8,words[i-15],1) ^ RTROT512(8,words[i-15],8) ^ RTSHIFT(words[i-15],7);
             /* s1 = (w[i- 2] rightrotate 17) xor (w[i- 2] rightrotate 19) xor (w[i- 2] rightshift 10) */
-            s1=RTROT512(4,words[i-2],17) ^ RTROT512(4,words[i-2],19) ^ RTSHIFT512(words[i-2],10);
+            s1=RTROT512(8,words[i-2],19) ^ RTROT512(8,words[i-2],61) ^ RTSHIFT(words[i-2],6);
             /* w[i] = w[i-16] + s0 + w[i-7] + s1 */
             words[i]=words[i-16]+s0+words[i-7]+s1;
         }
@@ -295,13 +297,13 @@ int sha512(unsigned char* message) {
         /* Compress for 64 rounds */
         for (int i=0; i<80; i++) {
             /* S1 = (e rightrotate 6) xor (e rightrotate 11) xor (e rightrotate 25) */
-            s1=RTROT512(4,e,6)^RTROT512(4,e,11)^RTROT512(4,e,25);
+            s1=RTROT512(8,e,14)^RTROT512(8,e,18)^RTROT512(8,e,41);
             /* ch = (e and f) xor ((not e) and g) */
             ch= (e&f)^((~e)&g);
             /* temp1 = h + S1 + ch + kv[i] + w[i] */
             temp1=h+s1+ch+kv512[i]+words[i];
             /* S0 = (a rightrotate 2) xor (a rightrotate 13) xor (a rightrotate 22) */
-            s0=RTROT512(4,a,2)^RTROT512(4,a,13)^RTROT512(4,a,22);
+            s0=RTROT512(8,a,28)^RTROT512(8,a,34)^RTROT512(8,a,39);
             /* maj = (a and b) xor (a and c) xor (b and c) */
             maj=(a&b)^(a&c)^(b&c);
             /* temp2 = S0 + maj */
@@ -328,8 +330,11 @@ int sha512(unsigned char* message) {
     }
 
 	/* 8. 生成最终的哈希消息摘要　Generate final hash digest */
-	for(int i=0; i<8; i++)
-		sprintf((char *)digest+8*i*2,"%08llx",hv512[i]); /*Convert to string */
+	// for(int i=0; i<8; i++)
+	// 	sprintf((char *)digest+8*i*2,"%08llx",hv512[i]); /*Convert to string */
+    for (int i = 0; i < 8; ++i) 
+        sprintf((char*)digest + 8*i*2 , "%016llx", hv512[i]);
+
 
 	printf("%s\n", digest);
     return 0;
@@ -339,6 +344,49 @@ int sha512(unsigned char* message) {
 int main(int argc, char **argv) {
 
     // sha256((unsigned char *)argv[1]); // type == 256 or 512
-    sha512((unsigned char *)argv[1]); 
+    // sha512((unsigned char *)argv[1]); 
+    // return 0;
+
+    FILE *fp;
+    unsigned char *buffer;
+    long file_size;
+
+    char*  inputFileName = argv[2];
+    fp = fopen(inputFileName, "rb");
+    if (fp == NULL) {
+        fprintf(stderr, "Error opening file.\n");
+        exit(1);
+    }
+
+    fseek(fp, 0L, SEEK_END);  // 移动文件指针到文件末尾
+    file_size = ftell(fp);    // 获取文件大小
+    rewind(fp);               // 重置文件指针到文件开头
+
+    buffer = (unsigned char*) malloc(file_size);  // 分配缓冲区内存
+    if (buffer == NULL) {
+        fprintf(stderr, "Error allocating memory.\n");
+        exit(1);
+    }
+
+    fread(buffer, file_size, 1, fp);  // 读取文件内容到缓冲区
+
+    fclose(fp);  // 关闭文件
+
+    // 使用缓冲区中的内容
+    // sha256((unsigned char*)buffer);
+    // printf("%s", argv[1]);
+    clock_t startTime, endTime;
+    startTime = clock();
+    uint32_t type = atoi(argv[1]);
+    if (256 == type) sha256((unsigned char*)buffer);
+    else if (512 == type)    sha512((unsigned char*)buffer);
+    else printf("only support SHA256 , SHA512");
+    endTime = clock();
+
+     printf("Time cost of SHA-%d Encrypt: %f s", type, ((double)endTime - startTime) / CLOCKS_PER_SEC);
+
+
+    free(buffer);  // 释放缓冲区内存
+
     return 0;
 }

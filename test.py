@@ -3,8 +3,7 @@ from Crypto.Cipher import AES
 
 # 定义加密函数
 def test_aes(aes_key, input_file):
-    
-    
+
     c_encrypted_file = str(len(aes_key)) + "bytes_c_encrypt_file.txt"
     # 可执行程序
     aes_executable = "./AES"
@@ -36,8 +35,21 @@ def test_sm4():
     print("#####  testing sm4  ####")
     return
 
-def test_sha2():
+def test_sha2(type, input_file):
     print("#####  testing sha2  ####")
+    # 可执行程序
+    sha2_executable = "./SHA2"
+    # 传入参数
+    args = [str(type), input_file]
+    # 使用subprocess模块执行命令，并获取标准输出和标准错误输出
+    result = subprocess.run([sha2_executable] + args, capture_output=True)
+    # 输出标准输出和标准错误输出
+    # print(result.stdout.decode())
+    # print(result.stderr.decode())
+    
+    hash_result = result.stdout.decode()
+    print(hash_result)
+    
     return 
 
 def test_sha3():
@@ -55,19 +67,22 @@ if __name__ == "__main__":
     input_file_16K = "16K.txt"
     input_file_4M = "4M.txt"
     # 测试加密结果是否正确
-    print("#####  testing AES  ####")
-    test_aes(aes_key128, input_file_16K)
-    test_aes(aes_key192, input_file_16K)
-    test_aes(aes_key256, input_file_16K)
-    test_aes(aes_key128, input_file_4M)
-    test_aes(aes_key192, input_file_4M)
-    test_aes(aes_key256, input_file_4M)
+    # print("#####  testing AES  ####")
+    # test_aes(aes_key128, input_file_16K)
+    # test_aes(aes_key192, input_file_16K)
+    # test_aes(aes_key256, input_file_16K)
+    # test_aes(aes_key128, input_file_4M)
+    # test_aes(aes_key192, input_file_4M)
+    # test_aes(aes_key256, input_file_4M)
     
     
     test_sm4()
 
     # 
-    test_sha2()
+    test_sha2(256, input_file_16K)
+    test_sha2(512, input_file_16K)
+    test_sha2(256, input_file_4M)
+    test_sha2(512, input_file_4M)
 
     test_sha3()
 
