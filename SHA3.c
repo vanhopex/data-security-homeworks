@@ -106,44 +106,7 @@ void iota(int round){
 }
 
 void keccak_p(){
-    for(int round = 0;round < 24;round ++){
-        // printf("Round %d\n", round);
-        theta();
-        // printf("After theta:\n");
-        // for(int y = 0;y < 5;y ++){
-        //     for(int x = 0;x < 5;x ++){
-        //         printf("[%d, %d] %016llx\n", x, y, A[x][y]);
-        //     }
-        // }
-        rho();
-        // printf("After rho:\n");
-        // for(int y = 0;y < 5;y ++){
-        //     for(int x = 0;x < 5;x ++){
-        //         printf("[%d, %d] %016llx\n", x, y, A[x][y]);
-        //     }
-        // }
-        pi();
-        // printf("After pi:\n");
-        // for(int y = 0;y < 5;y ++){
-        //     for(int x = 0;x < 5;x ++){
-        //         printf("[%d, %d] %016llx\n", x, y, A[x][y]);
-        //     }
-        // }
-        chi();
-        // printf("After chi:\n");
-        // for(int y = 0;y < 5;y ++){
-        //     for(int x = 0;x < 5;x ++){
-        //         printf("[%d, %d] %016llx\n", x, y, A[x][y]);
-        //     }
-        // }
-        iota(round);
-        // printf("After iota:\n");
-        // for(int y = 0;y < 5;y ++){
-        //     for(int x = 0;x < 5;x ++){
-        //         printf("[%d, %d] %016llx\n", x, y, A[x][y]);
-        //     }
-        // }
-    }
+    
 }
 
 void sponge(int r, unsigned char* message, int message_len, int d){
@@ -194,7 +157,14 @@ void sponge(int r, unsigned char* message, int message_len, int d){
         //         printf("[%d, %d] %016llx\n", x, y, A[x][y]);
         //     }
         // }
-        keccak_p();
+        // keccak_p();
+        for(int round = 0;round < 24;round ++){
+            theta();
+            rho();
+            pi();
+            chi();
+            iota(round);
+        }
     }
     int x = 0;
     int y = 0;
