@@ -6,7 +6,7 @@ SHA2 : SHA2.c
 	gcc -o SHA2 SHA2.c
 
 SHA3 : SHA3.c 
-	gcc -o SHA3 SHA3.c 
+	gcc -w -o SHA3 SHA3.c 
 
 AES : aes_main.o AES.o
 	gcc -o AES AES.o aes_main.o
